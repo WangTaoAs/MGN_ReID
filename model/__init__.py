@@ -1,0 +1,1 @@
+from .build_model import bulid_MGN_resnet
