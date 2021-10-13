@@ -48,7 +48,7 @@ class ImageDataset(Dataset):
         if self.transform is not None:
             img = self.transform(img)
 
-        return img, pid, camid, trackid,img_path.split('/')[-1]
+        return img, pid, camid, trackid, img_path.split('/')[-1]
 
 
 def train_collate_fn(batch):
@@ -60,6 +60,12 @@ def train_collate_fn(batch):
     viewids = torch.tensor(viewids, dtype=torch.int64)
     camids = torch.tensor(camids, dtype=torch.int64)
     return torch.stack(imgs, dim=0), pids, camids, viewids,
+
+def val_collate_fn(batch):
+    imgs, pids, camids, viewids, img_paths = zip(*batch)
+    viewids = torch.tensor(viewids, dtype=torch.int64)
+    camids_batch = torch.tensor(camids, dtype=torch.int64)
+    return torch.stack(imgs, dim=0), pids, camids, camids_batch, viewids, img_paths
 
 def make_data_loader(args):
     # train transform
@@ -108,8 +114,9 @@ def make_data_loader(args):
     val_set = ImageDataset(dst.query + dst.gallery, val_list)
 
     val_loader = DataLoader(val_set, 
-                              batch_size=args.batch_size, 
-                              sampler=RandomIdentitySampler(dst.train, args.batch_size, args.num_instance),
-                              num_workers=args.num_worker)
+                            batch_size=args.batch_size, 
+                            shuffle=False,
+                            num_workers=args.num_worker,
+                            collate_fn=val_collate_fn)
 
-    return train_loader, val_loader, class_num, cam_num, view_num
+    return train_loader, val_loader, class_num, cam_num, view_num, len(dst.query)
